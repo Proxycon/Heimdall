@@ -45,6 +45,7 @@ fun ScoreChart(
         MaterialTheme.colorScheme.error,
         goodScoreColor
     ),
+    pathColor: Color = MaterialTheme.colorScheme.background,
     max: Double = 100.0,
     size: Dp = 220.dp,
     thickness: Dp = 15.dp,
@@ -57,34 +58,56 @@ fun ScoreChart(
             targetValue = 1f,
             animationSpec = tween(durationMillis = 800, easing = EaseInOutExpo))
     }
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
+
+
+            val arcRadius = remember {
+                size - thickness
+            }
+            val startAngle = remember { bottomGap / 2 }
+            val sweepAngle: Float = remember {
+                    ((360 - bottomGap / 2 - startAngle) * (score / 100)).toFloat()
+            }
+            val colorArcOffset = remember { (bottomGap / 360) / 2 }
+            val brush = Brush.sweepGradient(
+                0f + colorArcOffset to colors[0],
+                1f - colorArcOffset to colors[1]
+            )
             Canvas(
                 modifier = Modifier
                     .size(size)
             ) {
 
-                val arcRadius = size.toPx() - thickness.toPx()
-                val startAngle = bottomGap / 2
-                val sweepAngle: Float =
-                    ((360 - bottomGap / 2 - startAngle) * (score / 100)).toFloat()
 
-                val colorArcOffset = (bottomGap / 360) / 2
-                val brush = Brush.sweepGradient(
-                    0f + colorArcOffset to colors[0],
-                    1f - colorArcOffset to colors[1]
-                )
                 rotate(90f) {
+                    // draw meter "path" behind meter, showing missing potential for full score
+                    drawArc(
+                        color = pathColor,
+                        startAngle = startAngle,
+                        sweepAngle = (360 - bottomGap),
+                        useCenter = false,
+                        style = Stroke(width = thickness.toPx(), cap = StrokeCap.Round),
+                        size = Size(arcRadius.toPx(), arcRadius.toPx()),
+                        topLeft = Offset(
+                            x = (size.toPx() - arcRadius.toPx()) / 2,
+                            y = (size.toPx() - arcRadius.toPx()) / 2
+                        ),
+                        //alpha = 0f
+                    )
                     drawArc(
                         brush = brush,
                         startAngle = startAngle,
                         sweepAngle = sweepAngle * animateFloat.value,
                         useCenter = false,
                         style = Stroke(width = thickness.toPx(), cap = StrokeCap.Round),
-                        size = Size(arcRadius, arcRadius),
+                        size = Size(arcRadius.toPx(), arcRadius.toPx()),
                         topLeft = Offset(
-                            x = (size.toPx() - arcRadius) / 2,
-                            y = (size.toPx() - arcRadius) / 2
+                            x = (size.toPx() - arcRadius.toPx()) / 2,
+                            y = (size.toPx() - arcRadius.toPx()) / 2
                         ),
                         //alpha = 0f
                     )
