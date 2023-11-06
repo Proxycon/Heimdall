@@ -6,7 +6,7 @@ import de.tomcory.heimdall.evaluator.ModuleResult
 import kotlinx.serialization.Serializable
 
 /**
- * Su-report data class for storing and encapsulating metric results of modules in database.
+ * Sub-report data class for storing and encapsulating metric results of modules in database.
  * Modules are later handed these for export or creating UI elements.
  *
  * @property reportId Reference to the corresponding main [Report]

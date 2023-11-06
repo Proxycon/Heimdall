@@ -92,7 +92,7 @@ abstract class Module {
         infoText: String,
         content: @Composable () -> Unit
     ) {
-        // indicated if the help text should be displayed or not
+        // indicated if the help text is triggered
         var showInfoText: Boolean by remember { mutableStateOf(false) }
         OutlinedCard {
             Column(

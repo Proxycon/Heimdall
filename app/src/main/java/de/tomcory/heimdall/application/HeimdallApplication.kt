@@ -35,6 +35,8 @@ class HeimdallApplication : Application() {
             if (HeimdallDatabase.init(this@HeimdallApplication)) {
                 Timber.d("Database instance created")
             }
+            // initialize Evaluator
+            // fruther access should happen via Evaluator.instance
             Evaluator.init()
         }
     }
