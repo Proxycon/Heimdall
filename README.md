@@ -4,6 +4,8 @@
 
 Heimdall is an advanced toolkit designed to empower researchers, developers, and privacy enthusiasts in analysing and studying the privacy-related behavior of Android applications.
 By providing a comprehensive overview of permissions, embedded third-party libraries, and network traffic, Heimdall aims to foster transparency and awareness regarding mobile privacy.
+Through a scoring framework and an intuitive interface, it makes complex privacy information more
+accessible for users.
 
 **Heimdall is still under active development, with lots of features and refinements still to come.** 
 Feel free to use the [issue tracker](https://github.com/tomcory/Heimdall/issues) if you come across any bugs or have feature requests!
@@ -14,6 +16,14 @@ Feel free to use the [issue tracker](https://github.com/tomcory/Heimdall/issues)
 - **Library Detection:** Easily detect embedded third-party libraries and SDKs that may be collecting user data.
 - **Network Traffic Monitoring:** Real-time inspection of network traffic to help you identify potential data leakages or suspicious connections.
 - **Fully on-device:** Heimdall requires no external infrastructure and does not transmit any data off the device, be it personal or any other kind of data.
+- **Privacy Score** Gathered privacy information on apps is abstracted and condensed into an
+  intuitive numeric score. Gamify your privacy!
+- **Modular Extensions Framework:** Metrics for this score can easily be added via in a single
+  file - plug-and-play! We provide a template that makes it easy to create a new Module.
+- **Accessible UI:** Visual indicators, color coding and helpful info texts make discovering your
+  apps data processing easy and engaging.
+
+![](assets/Screenshots.png "Heimdall's UI")
 
 ## Getting Started
 
@@ -26,14 +36,37 @@ Feel free to use the [issue tracker](https://github.com/tomcory/Heimdall/issues)
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/tomcory/heimdall.git
+   git clone https://github.com/proxycon/heimdall.git
    ```
-2. Open the project with Android Studio 
-3. Build and run the app on your device or emulator
+2. Open the project with [Android Studio](https://developer.android.com/studio)
+3. Build and run the app on an emulator or your device, using USB or WiFI debugging.
+
+Alternatively you can install the `.apk` found
+under [Releases](https://github.com/Proxycon/Heimdall/releases) or build the apk yourself.
 
 ## Use
 
+### Dependencies
+
+Heimdall leverages a variety of tools, frameworks and technologies:
+
+- [Gradle](https://gradle.org/) offers extensive build automation for Kotlin and Android
+  development.
+- [Jetpack Compose](https://developer.android.com/jetpack/compose)
+  and [Material Design 3](https://m3.material.io/) are Android’s recommended modern
+  toolkit and design system for building native User Interfaces that offer many standardized
+  components.
+- [Room](https://developer.android.com/training/data-storage/room) is the recommended built-in local
+  database solution of Android. It provides a
+  well integrated abstraction of [SQLite](https://www.sqlite.org/index.html) , the most widespread
+  database engine.
+- [kotlinx.serilization.json](https://github.com/Kotlin/kotlinx.serialization) was used for JSON en-
+  and decoding as official serialization
+  library of Kotlin.
+
 ### Components
+
+#### Scanners
 
 Heimdall comprises three Scanners: 
 
@@ -45,7 +78,7 @@ The figure below shows how these scanners extract data from monitored apps, what
 
 ![](assets/scanners.png "Heimdall's Scanners")
 
-### Man-in-the-Middle VPN
+#### Man-in-the-Middle VPN
 
 In modern versions of Android, HTTPS is enabled by default, which means that the vast majority of network traffic is TLS-encrypted as it passes through Heimdall's `TrafficScanner`.
 Bypassing this encryption requires the use of a MitM attack to hijack the TLS sessions that monitored apps establish with remote hosts. 
@@ -68,16 +101,72 @@ system/etc/security/cacerts
 
 Once you have installed the custom CA certificate, simply enable the MitM VPN via the _MitM_ preferences and launch the `TrafficScanner`.
 
-### Data export
+#### Evaluation
 
-All data collected by Heimdall is persisted in an on-device SQLite database and can be exported for external analysis in the following formats via the _Export_ screen:
-1. SQLite database
+Evaluation of installed apps is mainly driven by
+the [Evaluator](app/src/main/java/de/tomcory/heimdall/evaluator/Evaluator.kt). It is the interface
+between the modules and the rest of the application.
+A typical data flow might look like this:
+
+![](assets/DataFlow_Evaluator.png "Evaluation data flow")
+
+Currently, there are two example modules implemented:
+
+1. `StaticPermissonScore` evaluates the static permissions an app might use, declared in it's
+   manifests. This is not to be confused with the permission the app is actively using at any given
+   time.
+2. `TrackerScore` evaluates results from the `LibraryScanner` and deducts points from the score for
+   each tracker library found in the app.
+
+Future development might add Modules for active traffic, privacy policy or activity analysis.
+
+### Data Export
+
+All data collected by Heimdall is persisted in an on-device SQLite database and can be exported for
+external analysis.
+While better and more convenient methods are developed, use the Database inspector of Android
+Studio [to export Heimdall's database](https://developer.android.com/studio/inspect/database#export-db-inspector)
+
+You can also export evaluation results for a single app directly from within Heimdall.
+The export will be formatted as [JSON](https://www.json.org/json-en.html) for easy further
+processing and contain the following data:
+
+![](assets/export.png "Export data")
+Of course, additional properties your module might record can be added to this.
+
+Export flows for the whole database in the following formats are currently under development:
+
+1. SQLite database dump
 2. CSV
 3. JSON
 
 ## Contributing
 
 Feel free to open a new [issue](https://github.com/tomcory/Heimdall/issues) for bug reports or feature requests. Pull requests for contributions are always welcome!
+
+The code is documented using [KDoc](https://kotlinlang.org/docs/kotlin-doc.html) and follows the
+official [KDoc Style Guide](https://kotlinlang.org/docs/coding-conventions.html#documentation-comments).
+
+If you want to add your own module into Heimdall, create a file in
+the [modules](app/src/main/java/de/tomcory/heimdall/evaluator/modules) directory and add one line in
+the
+`init()` of
+the [ModuleFactory](app/src/main/java/de/tomcory/heimdall/evaluator/modules/ModuleFactory.kt):
+
+```kotlin
+    init {
+   /* add new modules here: */
+   this.registeredModules.add(yourNewModule())
+
+}
+```
+
+For orientation, what functionality is expected of your module, refer to
+the [Module Template Class](app/src/main/java/de/tomcory/heimdall/evaluator/modules/Module.kt).
+All modules should inherit from this class and have to implement the required function for the
+evaluation to work.
+You are very unrestricted in the design of your module and can even decide how you metric data is
+presented to the user.
 
 ## Citations
 
@@ -106,6 +195,3 @@ Identification of third-party tracking hosts is based on the [unified hosts](htt
 ## License
 This project is licensed under [GPLv3](https://www.gnu.org/licenses/gpl-3.0.html).
 
----
-Documentation follows the
-official [KDoc Style Guide](https://kotlinlang.org/docs/coding-conventions.html#documentation-comments)

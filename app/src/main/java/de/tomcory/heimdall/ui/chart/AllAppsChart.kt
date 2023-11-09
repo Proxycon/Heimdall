@@ -55,7 +55,6 @@ import de.tomcory.heimdall.ui.theme.GrayScaleGradientBrush
 import de.tomcory.heimdall.ui.theme.acceptableScoreColor
 import de.tomcory.heimdall.ui.theme.questionableScoreColor
 import de.tomcory.heimdall.ui.theme.unacceptableScoreColor
-import timber.log.Timber
 
 /**
  * Chart for showing device score.
@@ -98,7 +97,6 @@ fun AllAppsChart(
         horizontalAlignment = Alignment.CenterHorizontally,
 
         ) {
-        Timber.d("AllAppsChart debug: total: $total, arc: $arcRange, totalScore: $totalScore\n$appSets\n ")
         Box(contentAlignment = Alignment.Center) {
             // heimdall logo with filter
             Image(
