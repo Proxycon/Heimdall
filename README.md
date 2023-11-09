@@ -105,3 +105,7 @@ Early versions of the TrafficScanner employed [LittleProxy-mitm](https://github.
 Identification of third-party tracking hosts is based on the [unified hosts](https://github.com/StevenBlack/hosts) file curated by Steven Black. Similarly, third-party tracking library identification is based on the database curated by the [Exodus Privacy Project](https://exodus-privacy.eu.org/).
 ## License
 This project is licensed under [GPLv3](https://www.gnu.org/licenses/gpl-3.0.html).
+
+---
+Documentation follows the
+official [KDoc Style Guide](https://kotlinlang.org/docs/coding-conventions.html#documentation-comments)

@@ -9,6 +9,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 
+/**
+ * Floating Action Button for [AppDetailScreen] to issue a re-scan.
+ * Currently not used.
+ */
 @Preview
 @Composable
 fun RescanFloatingActionButton(onClick: ()->Unit = {}) {

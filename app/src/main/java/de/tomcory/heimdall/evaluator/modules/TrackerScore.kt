@@ -34,14 +34,18 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.put
+import org.json.JSONObject
 import timber.log.Timber
 
+/**
+ * Module evaluating the trackers detected in the code of an app.
+ */
 class TrackerScore : Module() {
     override val name: String = "TrackerScore"
     val label = "Tracker Libraries"
@@ -51,26 +55,35 @@ class TrackerScore : Module() {
         context: Context,
         forceRecalculate: Boolean
     ): Result<ModuleResult> {
-        // TODO implement lazy loading from Database
+        // load trackers from db
         val trackers = HeimdallDatabase.instance?.appXTrackerDao
             ?.getAppWithTrackers(app.packageName)?.trackers ?: listOf()
 
+        // deduct 0.2 point per tracker - this is pretty arbitrarily chosen
         val score = maxOf(1f - trackers.size * 0.2f, 0f)
+        // encode tracker details to string
         val additionalDetails: String = Json.encodeToString(trackers)
+        // return result
         return Result.success(ModuleResult(this.name, score, additionalDetails = additionalDetails))
     }
 
     @Composable
     override fun BuildUICard(report: Report?) {
+        // calling template UI Card builder
         super.UICard(
             title = this.label,
             infoText = "This modules scans for Libraries in the apps code that are know to relate to tracking and lists them."
         ) {
+            // display own content in card
             val context = LocalContext.current
             LibraryUICardContent(report = report, context)
         }
     }
 
+    /**
+     * Given a [report], this loads and returns the [SubReport] issued by this module for the specific report from the database.
+     * TODO: consider storing of report history. The are potentially multiple SubReports. Should consider using [Report.reportId].
+     */
     private fun loadSubReportFromDB(report: Report): SubReport? {
         return HeimdallDatabase.instance?.subReportDao?.getSubReportsByPackageNameAndModule(
             report.appPackageName,
@@ -78,52 +91,69 @@ class TrackerScore : Module() {
         )
     }
 
+    /**
+     * decode json details [info] string back into a [List] of [Tracker]s.
+     */
     private fun decode(info: String): List<Tracker> {
         Timber.d("trying to decode: $info")
         return try {
             Json.decodeFromString(info)
         } catch (e: Exception) {
             Timber.w(e, "Failed to decode in module: ${this.name}")
+            // return empty list if decoding failed
             listOf<Tracker>()
         }
     }
 
+    /**
+     * loads [SubReport] matching the given [report] from database and decode the [SubReport.additionalDetails] from json to [List] of [Tracker]s.
+     * Uses [loadSubReportFromDB] and [decode].
+     */
     private fun loadAndDecode(report: Report?): List<Tracker> {
         var trackers = listOf<Tracker>()
         var subReport: SubReport? = null
+        // when report is not null, fetch subreport
         report?.let {
             subReport = loadSubReportFromDB(report = report)
         }
-
+        // when successful, decode permission info
         subReport?.let {
             trackers = decode(it.additionalDetails)
         }
         return trackers
     }
 
+    /**
+     * Inner Content of UI card for this module.
+     * Visualizes found [Tracker]s and links to them.
+     */
     @Composable
     fun LibraryUICardContent(report: Report?, context: Context) {
         var trackers: List<Tracker> by remember { mutableStateOf(listOf()) }
         var loadingTrackers by remember { mutableStateOf(true) }
 
+        // load tracker info
         LaunchedEffect(key1 = 2, block = {
             this.launch(Dispatchers.IO) {
                 trackers = loadAndDecode(report)
                 loadingTrackers = false
             }
         })
-
+        // show loading animation
         AnimatedVisibility(visible = loadingTrackers, enter = fadeIn(), exit = fadeOut()) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
 
+        // when loaded, show content
         AnimatedVisibility(
             visible = !loadingTrackers,
             enter = slideInVertically(),
             exit = slideOutVertically()
         ) {
             Column {
+                // if trackers where found, show List
                 if (trackers.isNotEmpty()) {
+                    // create entry for each tracker, containing name and url
                     for (tracker in trackers) {
                         ListItem(
                             headlineContent = { Text(text = tracker.name) },
@@ -137,25 +167,32 @@ class TrackerScore : Module() {
                         )
                     }
                 } else {
-                    Text(text = "0 tracker libraries found")
+                    // no trackers found
+                    Text(text = "No tracker libraries found")
                 }
             }
         }
     }
 
     override fun exportToJsonObject(subReport: SubReport?): JsonObject {
+        // return empty json if subreport is null
         if (subReport == null) return buildJsonObject {
-            put(name, "No Info found")
+            put(name, JSONObject.NULL as JsonElement)
         }
+        // decode subreport
         val trackers =
             Json.encodeToJsonElement(Json.decodeFromString<List<Tracker>>(subReport.additionalDetails)).jsonArray
+        // parse tracker list to Json object. This is NOT a string but a Kotlin internal Json handling object
         var serializedJsonObject: JsonObject = Json.encodeToJsonElement(subReport).jsonObject
+        // remove old tracker info string
         serializedJsonObject = JsonObject(serializedJsonObject.minus("additionalDetails"))
+        // add permission info json object and return build json subreport
         val additionalPair = Pair("trackers", trackers)
         return JsonObject(serializedJsonObject.plus(additionalPair))
     }
 
     override fun exportToJson(subReport: SubReport?): String {
+        // first crafts json objects, then parses to string
         return exportToJsonObject(subReport).toString()
     }
 }

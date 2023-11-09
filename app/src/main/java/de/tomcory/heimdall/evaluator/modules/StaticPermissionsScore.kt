@@ -47,6 +47,9 @@ import kotlinx.serialization.json.jsonObject
 import org.json.JSONObject
 import timber.log.Timber
 
+/**
+ * Module that evaluates the static, potentially requested permission of apps.
+ */
 class StaticPermissionsScore : Module() {
     override val name: String = "StaticPermissionScore"
     val label: String = "Permissions"
@@ -56,8 +59,7 @@ class StaticPermissionsScore : Module() {
         context: Context,
         forceRecalculate: Boolean
     ): Result<ModuleResult> {
-
-
+        // load permission info from package manager
         val pm = context.packageManager
         val pkgInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             pm.getPackageInfo(
@@ -76,31 +78,41 @@ class StaticPermissionsScore : Module() {
                 PermissionInfo.PROTECTION_NORMAL
             }
         }
-
+        // count different permission categories
         val countDangerous = permProts.count { perm -> perm == PermissionInfo.PROTECTION_DANGEROUS }
 
         val countSignature = permProts.count { perm -> perm == PermissionInfo.PROTECTION_SIGNATURE }
 
         val countNormal = permProts.count { perm -> perm == PermissionInfo.PROTECTION_NORMAL }
 
+        // compute score - point subtraction for different types of permission is chosen arbitrarily
         val score =
             maxOf(1f - countDangerous * 0.4f - countSignature * 0.02f - countNormal * 0.01f, 0f)
 
+        // parse permission counts into json for storing in db
         val details =
             Json.encodeToString(PermissionCountInfo(countDangerous, countSignature, countNormal))
+
+        // return success result with module results, containing name, score and details
         return Result.success(ModuleResult(this.name, score, additionalDetails = details))
     }
 
     @Composable
     override fun BuildUICard(report: Report?) {
+        // calling template UI Card builder
         super.UICard(
             title = this.label,
             infoText = "This modules inspects the permissions the app might request at some point. These are categorized into 'Dangerous', 'Signature' and 'Normal'"
         ) {
+            // display own content in card
             UICardContent(report)
         }
     }
 
+    /**
+     * Given a [report], this loads and returns the [SubReport] issued by this module for the specific report from the database.
+     * TODO: consider storing of report history. The are potentially multiple SubReports. Should consider using [Report.reportId].
+     */
     private fun loadSubReportFromDB(report: Report): SubReport? {
         return HeimdallDatabase.instance?.subReportDao?.getSubReportsByPackageNameAndModule(
             report.appPackageName,
@@ -108,6 +120,9 @@ class StaticPermissionsScore : Module() {
         )
     }
 
+    /**
+     * decode json details [info] string back into [PermissionCountInfo].
+     */
     private fun decode(info: String): PermissionCountInfo? {
         Timber.d("trying to decode: $info")
 
@@ -115,16 +130,23 @@ class StaticPermissionsScore : Module() {
             Json.decodeFromString(info)
         } catch (e: Exception) {
             Timber.w(e, "Failed to decode in module: ${this.name}")
+            // return null if decoding failed
             null
         }
     }
 
+    /**
+     * loads [SubReport] matching the given [report] from database and decode the [SubReport.additionalDetails] from json to [PermissionCountInfo].
+     * Uses [loadSubReportFromDB] and [decode].
+     */
     private fun loadAndDecode(report: Report?): PermissionCountInfo? {
         var permissionCountInfo: PermissionCountInfo? = null
         var subReport: SubReport? = null
+        // when report is not null, fetch subreport
         report?.let {
             subReport = loadSubReportFromDB(it)
         }
+        // when successful, decode permission info
         subReport?.let {
             permissionCountInfo = decode(it.additionalDetails)
 
@@ -133,11 +155,17 @@ class StaticPermissionsScore : Module() {
         return permissionCountInfo
     }
 
+
+    /**
+     * Inner Content of UI card for this module.
+     * Visulizes the [PermissionCountInfo] in a [DonutChart].
+     */
     @Composable
     fun UICardContent(report: Report?) {
         var permissionCountInfo: PermissionCountInfo? by remember { mutableStateOf(null) }
         var loadingPermissions by remember { mutableStateOf(true) }
 
+        // load permission info
         LaunchedEffect(key1 = 1) {
             this.launch(Dispatchers.IO) {
                 permissionCountInfo = loadAndDecode(report)
@@ -145,10 +173,12 @@ class StaticPermissionsScore : Module() {
             }
         }
 
+        // show loading animation
         AnimatedVisibility(visible = loadingPermissions, enter = fadeIn(), exit = fadeOut()) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
 
+        // when loaded, show content
         AnimatedVisibility(
             visible = !loadingPermissions,
             enter = slideInVertically(),
@@ -158,6 +188,7 @@ class StaticPermissionsScore : Module() {
                 modifier = Modifier.padding(12.dp, 12.dp)
             ) {
                 Spacer(modifier = Modifier.height(8.dp))
+                // when permission info is set, display donut chart
                 permissionCountInfo?.let {
                     DonutChart(
                         values = listOf(
@@ -176,6 +207,7 @@ class StaticPermissionsScore : Module() {
 
                 }
             }
+            // if no info found, display text
             if (permissionCountInfo == null) {
                 // No Permission info found
                 Text(text = "No permission information found.")
@@ -185,23 +217,32 @@ class StaticPermissionsScore : Module() {
 
 
     override fun exportToJsonObject(subReport: SubReport?): JsonObject {
+        // return empty json if subreport is null
         if (subReport == null) return buildJsonObject {
             put(name, JSONObject.NULL as JsonElement)
         }
+        // decode subreport
         val permissionInfo: PermissionCountInfo? = decode(subReport.additionalDetails)
+        // parse permission info to Json object. This is NOT a string but a Kotlin internal Json handling object
         val permissionInfoJson = Json.encodeToJsonElement(permissionInfo).jsonObject
+        // parse subreport to Json object. Similarly NOT a string
         var serializedJsonObject: JsonObject = Json.encodeToJsonElement(subReport).jsonObject
+        // remove old permission info string
         serializedJsonObject = JsonObject(serializedJsonObject.minus("additionalDetails"))
+        // add permission info json object and return build json subreport
         val additionalPair = Pair("permission info", permissionInfoJson)
         return JsonObject(serializedJsonObject.plus(additionalPair))
     }
 
     override fun exportToJson(subReport: SubReport?): String {
+        // first crafts json objects, then parses to string
         return exportToJsonObject(subReport).toString()
     }
 }
 
-
+/**
+ * Data class for storing the permission counts of an apps.
+ */
 @Serializable
 data class PermissionCountInfo(
     val dangerousPermissionCount: Int,

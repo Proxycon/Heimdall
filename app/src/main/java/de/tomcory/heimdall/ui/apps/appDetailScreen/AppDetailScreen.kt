@@ -35,6 +35,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -57,30 +58,65 @@ import de.tomcory.heimdall.persistence.database.entity.Report
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
+/**
+ * Fullscreen View Composable responsible for displaying app details given as [appWithReports], including
+ * score and metric information.
+ * It is not advices to override other parameters.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NewAppDetailScreen(
+fun AppDetailScreen(
     appWithReports: AppWithReports,
     onDismissRequest: () -> Unit,
+    /**
+     * Facotry for the ViewModel. Needed to pass [appWithReports] to the ViewModel on creation.
+     */
     factory: AppDetailViewModelFactory = AppDetailViewModelFactory(appWithReports),
+    /**
+     * ViewModel for this Composable. Holds the UI State and performance heavy operations.
+     * If existing, the same ViewModel instance is assigned throughout recompositions.
+     */
     appDetailViewModel: AppDetailViewModel = viewModel(factory = factory),
     context: Context = LocalContext.current,
+    /**
+     * Function to be executed when the user issues a re-scan of the current [appWithReports].
+     */
     userRescanApp: () -> Unit = { appDetailViewModel.rescanApp(context) },
+    /**
+     * Function to be executed when the user issues uninstallation of the current [appWithReports].
+     */
     userUninstallApp: () -> Unit = { appDetailViewModel.uninstallApp(context) },
+    /**
+     * Function to be executed when the user issues an export of the current [appWithReports].
+     */
     userExportData: () -> Unit = { appDetailViewModel.exportToJson(context) }
 ) {
-
+    // CoroutineScope for UI animations, like snackbar notification
     val scope = rememberCoroutineScope()
 
+    // collecti UI state from ViewModel
     val appDetailUiState by appDetailViewModel.uiState.collectAsState()
-    appDetailViewModel.updateApp(appWithReports)
 
+    LaunchedEffect(key1 = 0) {
+        /**
+         * TODO
+         * workaround to prevent the ViewModel from persisting between different app detail screens.
+         * It should be destroyed when the composable is dismissed, but it doesn't.
+         * That's the bug.
+         * This workaround is bad vor performance and doesn't even fix the issue completely.
+         */
+        appDetailViewModel.updateApp(appWithReports)
+    }
+
+    // state of drop down menu
     var dropdownExpanded by remember { mutableStateOf(false) }
 
+    // logging Composable creation
     Timber.d("Showing Details of $appWithReports")
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        // header bar
         topBar = {
             TopAppBar(
                 modifier = Modifier.padding(0.dp, 0.dp, 12.dp, 0.dp),
@@ -112,6 +148,7 @@ fun NewAppDetailScreen(
                         )
                     }
                 },
+                // drop menu and toggle for additional actions
                 actions = {
                     IconToggleButton(
                         checked = false,
@@ -130,6 +167,7 @@ fun NewAppDetailScreen(
                             text = { Text("Rescan") },
                             onClick = {
                                 userRescanApp()
+                                // notify user via snackbar notification
                                 scope.launch {
                                     appDetailUiState.snackbarHostState.showSnackbar("App re-scanned")
                                 }
@@ -145,6 +183,7 @@ fun NewAppDetailScreen(
                             text = { Text("Export") },
                             onClick = {
                                 userExportData()
+                                // notify user
                                 scope.launch {
                                     appDetailUiState.snackbarHostState.showSnackbar("Export printed to debugging log")
                                 }
@@ -166,8 +205,6 @@ fun NewAppDetailScreen(
         snackbarHost = {
             SnackbarHost(hostState = appDetailUiState.snackbarHostState)
         },
-        //floatingActionButton = { RescanFloatingActionButton(userRescanApp) },
-
         ) { padding ->
         Column(Modifier.padding(padding)) {
             LazyColumn(
@@ -178,8 +215,8 @@ fun NewAppDetailScreen(
                 item {
                     Spacer(modifier = Modifier.height(8.dp))
                 }
-
                 item {
+                    // score
                     ScoreCard(report = appDetailUiState.report)
                 }
                 item {
@@ -190,6 +227,7 @@ fun NewAppDetailScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
+                        // action buttons
                         FilledTonalButton(
                             onClick = { userUninstallApp() }) {
                             //Row {
@@ -211,8 +249,11 @@ fun NewAppDetailScreen(
                         }
                     }
                 }
+                // create item for each module and request their metric detail cards
                 items(Evaluator.instance.getModules()) { module ->
                     module.BuildUICard(report = appDetailUiState.report)
+
+                    // buffer padding between cards
                     Spacer(modifier = Modifier.height(9.dp))
                 }
             }
@@ -220,7 +261,11 @@ fun NewAppDetailScreen(
     }
 }
 
-
+/**
+ * Data class for the state of the [AppDetailScreen] UI.
+ * Most importantly it holds the [appWithReports] and unpacks it,
+ * storing the latest [report], [packageName], [packageIcon], and [packageLabel] for easy access.
+ */
 data class AppDetailScreeUIState(
     var appWithReports: AppWithReports = AppWithReports(
         App(
@@ -246,11 +291,15 @@ data class AppDetailScreeUIState(
     val packageName: String = app.packageName,
     val packageIcon: Drawable? = app.icon,
 
+    // currently not used - dropdown state should eventually be outsourced to UI state
     var dropdownExpanded: MutableState<Boolean> = mutableStateOf(false),
     val snackbarHostState: SnackbarHostState = SnackbarHostState()
 )
 
 
+/**
+ * Debugging Preview
+ */
 @Preview
 @Composable
 fun NewAppDetailScreenPreview() {
@@ -262,6 +311,6 @@ fun NewAppDetailScreenPreview() {
     )
     val reports =
         listOf(Report(mainScore = 0.76, timestamp = 1234, appPackageName = "com.test.package"))
-    NewAppDetailScreen(appWithReports = AppWithReports(app, reports), onDismissRequest = { })
+    AppDetailScreen(appWithReports = AppWithReports(app, reports), onDismissRequest = { })
 }
 

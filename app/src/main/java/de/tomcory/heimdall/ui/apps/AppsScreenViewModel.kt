@@ -18,19 +18,35 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 
+/**
+ * ViewModel for [AppsScreen].
+ * Holds the [AppsScreenUIState] and performance heavy operations.
+ */
 class AppsScreenViewModel : ViewModel() {
+    // instantiate State as private Mutable State Flow to ensure only the ViewModel updates it - this handling is considered best practice
     private val _uiState = MutableStateFlow(AppsScreenUIState())
+
+    // read-only state for the Composable
     val uiState: StateFlow<AppsScreenUIState> = _uiState.asStateFlow()
+
+    // coroutine dispatcher for IO operations
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 
+    // on creation, fetch app infos
     init {
         updateApps()
     }
 
+    /**
+     * parallelized wrapper for [fetchApps]
+     */
     fun updateApps() {
         viewModelScope.launch { fetchApps() }
     }
 
+    /**
+     * dispatches coroutine to fetch apps from db and update [uiState].
+     */
     private suspend fun fetchApps() = withContext(ioDispatcher) {
         Timber.d("loading apps for apps screen from DB")
         val apps =
@@ -39,22 +55,32 @@ class AppsScreenViewModel : ViewModel() {
         Timber.d("finished loading ${apps.size} apps from DB")
     }
 
-    // Icons fetched externally because Context from UI is needed.
-    // Context should never be statically stored in viewModel to avoid memory leaks
+    /**
+     * Icons fetching triggered by Composable because Context from UI is needed.
+     * Context should never be statically stored in viewModel to avoid memory leaks
+     */
     suspend fun loadIcons(context: Context) = withContext(ioDispatcher) {
         Timber.d("loading apps for apps screen from DB")
         var apps = uiState.value.apps
+        // iterate over apps
         apps = apps.map {
+            // if app entry has no icon and is installed:
             if (it.app.icon == null && it.app.isInstalled) {
+                // load icon from ScanManager
                 it.app.icon = ScanManager.getAppIcon(context, it.app.packageName)
             }
             it
         }
+        // update state
         _uiState.update { AppsScreenUIState(apps, loadingApps = false) }
         Timber.d("finished loading ${apps.size} apps from DB")
     }
 }
 
+/**
+ * State for [AppsScreen].
+ * Holding list off [apps] and status [loadingApps].
+ */
 data class AppsScreenUIState(
     val apps: List<AppWithReports> = listOf(
         AppWithReports(

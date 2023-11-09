@@ -20,12 +20,15 @@ import androidx.compose.ui.unit.dp
 import de.tomcory.heimdall.persistence.database.entity.Report
 import de.tomcory.heimdall.ui.chart.ScoreChart
 
+/**
+ * Composable displaying the Score Card Element.
+ * Derives the score information from a given [report].
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScoreCard(report: Report?) {
 
     ElevatedCard(
-        onClick = { /*TODO*/ },
         modifier = Modifier
             .fillMaxWidth()
     ) {

@@ -43,7 +43,7 @@ import kotlinx.serialization.json.JsonObject
 abstract class Module {
 
     /**
-     * Name describing this metric. Used for
+     * Name describing this metric. Used to reference this module, e.g in [SubReport]. Should be unique.
      */
     abstract val name: String
 
@@ -56,6 +56,7 @@ abstract class Module {
      * Main function to compute score for an app in regards to the privacy metric this module implements.
      * Dynamic modules can use context of app data to generate a result every call.
      * Static modules can decide to load a possibly existing score from the database if the metric relies on non-changing parameters to reduce load.
+     * Returns a [Result] that if successful contains a [ModuleResult] with module [name], the evaluated score, and details parsed as JSON in [ModuleResult.additionalDetails].
      *
      * @param app Database entry containing app metadata
      * @param context Context to enable computation resources like package manager
@@ -146,8 +147,9 @@ abstract class Module {
     }
 
     /**
-     * Transforms [subReport] to [JsonObject], decoding and appending [SubReport.additionalDetails] as class specific property;
-     * returning one coherent JsonObjet.
+     * Transforms [subReport] to [JsonObject], decoding and appending [SubReport.additionalDetails] as json instead of string.
+     *
+     * Returning one coherent [JsonObject].
      *
      * Use [exportToJson] for String representation.
      * @see exportToJson

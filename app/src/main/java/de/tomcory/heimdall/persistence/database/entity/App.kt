@@ -6,6 +6,10 @@ import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
 
+/**
+ * Data class for storing app metadata.
+ * When inserting into the database, [icon] property is omitted.
+ */
 @Entity
 data class App(
     @PrimaryKey

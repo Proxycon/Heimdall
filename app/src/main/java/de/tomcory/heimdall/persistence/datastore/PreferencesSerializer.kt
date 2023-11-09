@@ -8,6 +8,10 @@ import timber.log.Timber
 import java.io.InputStream
 import java.io.OutputStream
 
+/**
+ * Set all relevant preferences to their default values. Change default values here.
+ * Also responsible for Datastore IO operation.
+ */
 object PreferencesSerializer : Serializer<Preferences> {
     override val defaultValue: Preferences = Preferences.newBuilder()
         .setVpnDnsServer("1.1.1.1")

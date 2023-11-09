@@ -12,7 +12,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import de.tomcory.heimdall.persistence.database.dao.AppWithReports
 import de.tomcory.heimdall.ui.apps.AppListItem
-import de.tomcory.heimdall.ui.apps.appDetailScreen.NewAppDetailScreen
+import de.tomcory.heimdall.ui.apps.appDetailScreen.AppDetailScreen
 
 @Composable
 fun FlopApps(apps: List<AppWithReports>) {
@@ -37,7 +37,7 @@ fun FlopApps(apps: List<AppWithReports>) {
                     onDismissRequest = { showAppDetailDialog = false },
                     properties = DialogProperties(usePlatformDefaultWidth = false)
                 ) {
-                    NewAppDetailScreen(
+                    AppDetailScreen(
                         appWithReports = app,
                         onDismissRequest = { showAppDetailDialog = false })
                 }

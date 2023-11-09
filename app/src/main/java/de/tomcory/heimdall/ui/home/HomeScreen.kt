@@ -63,6 +63,10 @@ import proxy.HeimdallHttpProxyServer
 import timber.log.Timber
 import java.net.InetSocketAddress
 
+/**
+ * Home Screen. Maon View when opening the application.
+ * Contains [DeviceOverview] and [PreferencesScreen].
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen() {
@@ -183,6 +187,7 @@ fun HomeScreen() {
                 }
             }
         ) {
+            // sedning deviceOverviewViewModel to Prefernence screen, so scanning action there updates the ui.
             var deviceOverviewViewModel: DeviceOverviewViewModel? = null
             if (openPreferences) {
                 PreferencesScreen {
@@ -198,6 +203,7 @@ fun HomeScreen() {
                     .padding(it)
                     .background(MaterialTheme.colorScheme.surface)
             ) {
+                // call device overview and save viewModel - unorthodox
                 deviceOverviewViewModel = DeviceOverview()
             }
         }

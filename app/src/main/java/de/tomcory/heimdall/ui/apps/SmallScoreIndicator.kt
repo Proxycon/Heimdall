@@ -44,6 +44,7 @@ fun SmallScoreIndicator(score:Double, size: Dp = 50.dp) {
     Box(modifier = Modifier
         .size(size)
     ) {
+        // colored cirlce
         Canvas(modifier = Modifier
             .fillMaxSize()
             .align(Alignment.Center)) {
@@ -52,6 +53,7 @@ fun SmallScoreIndicator(score:Double, size: Dp = 50.dp) {
                 color = backgroundColor,
                 )
         }
+        // score number
         Text(
             text = "${(score * 100).toInt()}",
             style = MaterialTheme.typography.headlineSmall.merge(
@@ -63,17 +65,27 @@ fun SmallScoreIndicator(score:Double, size: Dp = 50.dp) {
 
 }
 
+/**
+ * Preview for [SmallScoreIndicator] with high score.
+ */
 @Preview
 @Composable
 fun SmallScoreIndicatorPreviewAcceptable() {
     SmallScoreIndicator(score = .90)
 }
+
+/**
+ * Preview for [SmallScoreIndicator] with medium score.
+ */
 @Preview
 @Composable
 fun SmallScoreIndicatorPreviewQuestionable() {
     SmallScoreIndicator(score = .70)
 }
 
+/**
+ * Preview for [SmallScoreIndicator] with low score.
+ */
 @Preview
 @Composable
 fun SmallScoreIndicatorPreviewUnacceptable() {

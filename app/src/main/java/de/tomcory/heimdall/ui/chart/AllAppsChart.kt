@@ -57,6 +57,11 @@ import de.tomcory.heimdall.ui.theme.questionableScoreColor
 import de.tomcory.heimdall.ui.theme.unacceptableScoreColor
 import timber.log.Timber
 
+/**
+ * Chart for showing device score.
+ * Takes a [List] of [ChartData] as [appSets] where each entry defines one category.
+ * Displays [totalScore] and [maxScore] in the center.
+ */
 @Composable
 fun AllAppsChart(
     thickness: Dp = 12.dp,
@@ -68,6 +73,7 @@ fun AllAppsChart(
 ) {
 
     val animateFloat = remember { Animatable(0f) }
+    // animate grwoing of the category chart and the total score
     LaunchedEffect(animateFloat) {
         animateFloat.animateTo(
             targetValue = 1f,
@@ -75,8 +81,9 @@ fun AllAppsChart(
         )
     }
 
-
+    // compute total number of apps
     val total by remember { mutableStateOf(appSets.sumOf { it.size }) }
+    // compute arc range respecting specified gap
     val arcRange = remember { 360f - bottomGap }
 
     // Convert each value to angle
@@ -85,6 +92,7 @@ fun AllAppsChart(
             arcRange * it.size / total
         }
     }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -92,6 +100,7 @@ fun AllAppsChart(
         ) {
         Timber.d("AllAppsChart debug: total: $total, arc: $arcRange, totalScore: $totalScore\n$appSets\n ")
         Box(contentAlignment = Alignment.Center) {
+            // heimdall logo with filter
             Image(
                 painter = painterResource(R.drawable.ic_heimdall_logo_round),
                 contentDescription = "Heimdall App Icon",
@@ -104,18 +113,22 @@ fun AllAppsChart(
                     .size(size = 150.dp)
                     .clip(CircleShape)
                     .clickable { /*userScanApps() */ })
+            // arcs chart
             Canvas(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .size(size)
             ) {
+                // if score is given (default is -1)
                 if (total > 0) {
                     val startAngle = 90f + bottomGap / 2
                     val arcRadius = size.toPx() - thickness.toPx()
 
                     var currentAngle = startAngle
+                    // iterate over sets
                     for (setIndex in appSets.indices) {
-                        // val brush = BlueGradientBrush
+
+                        // draw arc per set
                         drawArc(
                             color = appSets[setIndex].color,
                             startAngle = currentAngle,
@@ -130,10 +143,11 @@ fun AllAppsChart(
                             //blendMode = BlendMode.Multiply,
                             alpha = 1f,
                         )
+                        // start next arc where previous arc stopped
                         currentAngle += sweepAngles[setIndex]
                     }
 
-                    // underlaying arc for colorblending
+                    // underlaying arc for color blending and global gradient effect
                     drawArc(
                         brush = GrayScaleGradientBrush,
                         startAngle = startAngle,
@@ -148,7 +162,9 @@ fun AllAppsChart(
                         blendMode = BlendMode.Softlight,
                         alpha = 1f
                     )
-                } else {
+                } else // when no score is given
+                {
+                    // draw full arc without categories because it looks good
                     val arcRadius = size.toPx() - thickness.toPx()
                     val brush = BlueGradientBrush
                     drawArc(
@@ -165,7 +181,9 @@ fun AllAppsChart(
                     )
                 }
             }
+            // if score is given, show score
             if (totalScore > -1f) {
+                // score text
                 Box {
                     Text(
                         text = (totalScore * animateFloat.value).toInt().toString(),
@@ -175,6 +193,7 @@ fun AllAppsChart(
                         fontWeight = FontWeight.SemiBold
                     )
                 }
+                // score max
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -187,6 +206,7 @@ fun AllAppsChart(
                 }
             }
         }
+        // if score is set, show categories
         if (totalScore > -1f) {
             Spacer(modifier = Modifier.height(30.dp))
             Column(
@@ -194,13 +214,19 @@ fun AllAppsChart(
                 horizontalAlignment = Alignment.CenterHorizontally
             )
             {
+                // small explanitory header text
                 Text(text = " < Of your apps are >")
+
+                // iterate over each set
                 appSets.forEach {
+                    // state of info text toggle
                     var showInfoText by remember { mutableStateOf(false) }
+                    // create category label
                     ChartLegendItem(
                         data = it,
                         animationFactor = animateFloat.value,
                         onTrigger = fun() { showInfoText = !showInfoText })
+                    // if help text toggled, show it
                     AnimatedVisibility(visible = showInfoText) {
                         HelpTextBox(infoText = it.infoText)
                     }
@@ -210,6 +236,11 @@ fun AllAppsChart(
     }
 }
 
+/**
+ * data class to hold one group / set of the [AllAppsChart].
+ * Includes a [label] as name for the category, a [size] of the set, the [color] for the set,
+ * and a explanatory [infoText]
+ */
 data class ChartData(
     val label: String,
     val size: Int,
@@ -217,9 +248,14 @@ data class ChartData(
     val infoText: String = "InfoText missing"
 )
 
+/**
+ * Legend for [AllAppsChart], displaying one set.
+ * Displays all infos of [ChartData]
+ */
 @Composable
 fun ChartLegendItem(data: ChartData, onTrigger: () -> Unit, animationFactor: Float) {
     ListItem(
+        // set size in color
         leadingContent = {
             Text(
                 color = data.color,
@@ -231,15 +267,14 @@ fun ChartLegendItem(data: ChartData, onTrigger: () -> Unit, animationFactor: Flo
                 textAlign = TextAlign.Center
             )
         },
-        /*overlineContent = {
-            Text(text = "of your apps are considered", style = MaterialTheme.typography.labelLarge)
-                          },*/
+        // set label
         headlineContent = {
             Text(
                 text = data.label,
                 style = MaterialTheme.typography.headlineSmall.merge(TextStyle(fontStyle = FontStyle.Italic))
             )
         },
+        // help text toglle
         trailingContent = {
             IconButton(
                 onClick = { onTrigger() },

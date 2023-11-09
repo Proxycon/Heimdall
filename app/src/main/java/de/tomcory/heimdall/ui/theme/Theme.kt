@@ -106,6 +106,7 @@ val unacceptableScoreColor = badScoreColor // md_theme_light_error
 val questionableScoreColor = md_theme_dark_warning
 val acceptableScoreColor = goodScoreColor //md_theme_light_primary
 
+// colors for permission diagram
 val altPrimaryColor = lightMint
 val altSecondaryColor = lightGreen
 val altTernaryColor = rose

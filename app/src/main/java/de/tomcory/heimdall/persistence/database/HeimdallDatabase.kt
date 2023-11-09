@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room.databaseBuilder
 import androidx.room.RoomDatabase
-import de.tomcory.heimdall.persistence.database.entity.SubReport
 import de.tomcory.heimdall.persistence.database.dao.AppDao
 import de.tomcory.heimdall.persistence.database.dao.AppXPermissionDao
 import de.tomcory.heimdall.persistence.database.dao.AppXTrackerDao
@@ -25,8 +24,14 @@ import de.tomcory.heimdall.persistence.database.entity.Report
 import de.tomcory.heimdall.persistence.database.entity.Request
 import de.tomcory.heimdall.persistence.database.entity.Response
 import de.tomcory.heimdall.persistence.database.entity.Session
+import de.tomcory.heimdall.persistence.database.entity.SubReport
 import de.tomcory.heimdall.persistence.database.entity.Tracker
 
+/**
+ * Database class for the application.
+ * Use via [HeimdallDatabase.instance] property to ensure singleton.
+ * Database operations should be accessed via the various [Dao] interfaces.
+ */
 @Database(
     version = 6,
     entities = [

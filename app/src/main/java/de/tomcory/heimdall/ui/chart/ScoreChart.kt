@@ -38,6 +38,12 @@ fun ScoreChartPreview() {
     )
 }
 
+
+/**
+ * CHart for displaying App [score].
+ * Includes a arc meter with a gradient depending on the [colors] given.
+ *
+ */
 @Composable
 fun ScoreChart(
     score: Double,
@@ -53,6 +59,7 @@ fun ScoreChart(
 ) {
 
     val animateFloat = remember { Animatable(0f) }
+    // animate meter arc growing when opened
     LaunchedEffect(animateFloat) {
         animateFloat.animateTo(
             targetValue = 1f,
@@ -73,6 +80,7 @@ fun ScoreChart(
                     ((360 - bottomGap / 2 - startAngle) * (score / 100)).toFloat()
             }
             val colorArcOffset = remember { (bottomGap / 360) / 2 }
+            // gradient
             val brush = Brush.sweepGradient(
                 0f + colorArcOffset to colors[0],
                 1f - colorArcOffset to colors[1]
@@ -82,7 +90,7 @@ fun ScoreChart(
                     .size(size)
             ) {
 
-
+                // rotate 90 because gradient definition stats a 0f angle (right) - so everything is drawn on the side and then rotated
                 rotate(90f) {
                     // draw meter "path" behind meter, showing missing potential for full score
                     drawArc(
@@ -98,6 +106,7 @@ fun ScoreChart(
                         ),
                         //alpha = 0f
                     )
+                    // score meter arc
                     drawArc(
                         brush = brush,
                         startAngle = startAngle,
@@ -114,11 +123,13 @@ fun ScoreChart(
                 }
 
             }
+            // score numer text
             Box {
                 Text(text = score.toInt().toString(), style = MaterialTheme.typography.displayLarge.merge(
                     TextStyle(brush = BlueGradientBrush)
                 ), fontWeight = FontWeight.SemiBold)
             }
+            // score max text
             Box(modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(vertical = 12.dp)) {

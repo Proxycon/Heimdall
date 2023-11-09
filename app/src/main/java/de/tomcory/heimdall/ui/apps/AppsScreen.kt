@@ -59,119 +59,22 @@ import de.tomcory.heimdall.R
 import de.tomcory.heimdall.persistence.database.dao.AppWithReports
 import de.tomcory.heimdall.persistence.database.entity.App
 import de.tomcory.heimdall.persistence.database.entity.Report
-import de.tomcory.heimdall.ui.apps.appDetailScreen.NewAppDetailScreen
+import de.tomcory.heimdall.ui.apps.appDetailScreen.AppDetailScreen
 
-@Composable
-fun AppInfoList(paddingValues: PaddingValues, apps: List<AppWithReports>) {
-    if (apps.isEmpty()) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            Text(
-                text = "No apps found in Database. Consider rescanning",
-                modifier = Modifier.align(Alignment.Center),
-                style = MaterialTheme.typography.labelMedium
-            )
-        }
-    } else {
-        LazyColumn(modifier = Modifier.padding(paddingValues)) {
-            items(apps) {
-                var showAppDetailDialog by remember { mutableStateOf(false) }
-                AppListItem(
-                    appWithReports = it,
-                    modifier = Modifier.clickable {
-                        showAppDetailDialog = true
-                    }
-                )
-
-                if (showAppDetailDialog) {
-                    Dialog(
-                        onDismissRequest = { showAppDetailDialog = false },
-                        properties = DialogProperties(usePlatformDefaultWidth = false)
-                    ) {
-                        NewAppDetailScreen(
-                            appWithReports = it,
-                            onDismissRequest = { showAppDetailDialog = false })
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun AppListItem(appWithReports: AppWithReports, modifier: Modifier) {
-    val app = remember {
-        appWithReports.app
-    }
-    ListItem(
-        headlineContent = {
-            if (!app.isInstalled) {
-                StrikethroughText(text = app.label)
-            } else {
-                Text(text = app.label)
-            }
-
-        },
-        supportingContent = {
-            if(!app.isInstalled) {
-                StrikethroughText(text = app.packageName)
-            } else {
-                Text(text = app.packageName)
-            }
-        },
-        leadingContent = @Composable {
-            val painter = if (app.icon == null) {
-                painterResource(R.drawable.robot)
-            } else {
-                rememberDrawablePainter(drawable = app.icon)
-            }
-
-            val colorFilter = remember {
-                if (!app.isInstalled) {
-                    ColorFilter.colorMatrix(ColorMatrix().apply {
-                        setToSaturation(0f) // setting saturation to 0 will convert image to grayscale
-                    })
-                } else {
-                    null
-                }
-            }
-
-            Image(painter = painter, contentDescription = "App icon", modifier = Modifier.size(40.dp), colorFilter = colorFilter)
-        },
-        trailingContent = {
-            val score: Double? = remember { appWithReports.getLatestReport()?.mainScore }
-            score?.let {
-                SmallScoreIndicator(score = score)
-            }
-
-        },
-        modifier = modifier
-    )
-}
-
-@Composable
-fun StrikethroughText(text: String, modifier: Modifier = Modifier) {
-    val annotatedString = remember {
-        buildAnnotatedString {
-            withStyle(style = SpanStyle(textDecoration = TextDecoration.LineThrough)) {
-                append(text)
-            }
-        }
-    }
-
-    Text(text = annotatedString, modifier = modifier)
-}
-
+/**
+ * View Composable listing all apps.
+ * Works with [AppsScreenViewModel] for UI State.
+ * Default arguments should not be overwritten.
+ */
 @Composable
 fun AppsScreen(
     viewModel: AppsScreenViewModel = viewModel(),
     context: Context = LocalContext.current,
 ) {
-
+    // collect state from viewmodel
     val uiState by viewModel.uiState.collectAsState()
+
+    // issue viewmodel to fetch the icons on first composition
     LaunchedEffect(key1 = 0) {
         viewModel.loadIcons(context)
     }
@@ -180,6 +83,7 @@ fun AppsScreen(
             AppsTopBar()
         }
     ) {
+        // show loading animation while viewmodel fetches icons
         AnimatedVisibility(visible = uiState.loadingApps, enter = fadeIn(), exit = fadeOut()) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -190,13 +94,16 @@ fun AppsScreen(
                 Text(text = "Loading apps...")
             }
         }
-
+        // when loading done show list
         AnimatedVisibility(visible = !uiState.loadingApps, enter = fadeIn(), exit = fadeOut()) {
             AppInfoList(it, apps = uiState.apps)
         }
     }
 }
 
+/**
+ * Top Bar of [AppsScreen] with potential filter and search functionality.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppsTopBar() {
@@ -239,12 +146,134 @@ fun AppsTopBar() {
     }
 }
 
+/**
+ * Listing [apps] as [AppListItem] with lazy loading.
+ */
+@Composable
+fun AppInfoList(paddingValues: PaddingValues, apps: List<AppWithReports>) {
+    if (apps.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            Text(
+                text = "No apps found in Database. Consider rescanning",
+                modifier = Modifier.align(Alignment.Center),
+                style = MaterialTheme.typography.labelMedium
+            )
+        }
+    } else {
+        LazyColumn(modifier = Modifier.padding(paddingValues)) {
+            items(apps) {
+                var showAppDetailDialog by remember { mutableStateOf(false) }
+                AppListItem(
+                    appWithReports = it,
+                    modifier = Modifier.clickable {
+                        showAppDetailDialog = true
+                    }
+                )
+
+                if (showAppDetailDialog) {
+                    Dialog(
+                        onDismissRequest = { showAppDetailDialog = false },
+                        properties = DialogProperties(usePlatformDefaultWidth = false)
+                    ) {
+                        AppDetailScreen(
+                            appWithReports = it,
+                            onDismissRequest = { showAppDetailDialog = false })
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * List item for [AppInfoList] representing one app.
+ * Contains icon, name and score indicator for that app.
+ */
+@Composable
+fun AppListItem(appWithReports: AppWithReports, modifier: Modifier) {
+    val app = remember {
+        appWithReports.app
+    }
+    ListItem(
+        // label
+        headlineContent = {
+            if (!app.isInstalled) {
+                StrikethroughText(text = app.label)
+            } else {
+                Text(text = app.label)
+            }
+
+        },
+        // packageName
+        supportingContent = {
+            if(!app.isInstalled) {
+                StrikethroughText(text = app.packageName)
+            } else {
+                Text(text = app.packageName)
+            }
+        },
+        // icon
+        leadingContent = @Composable {
+            val painter = if (app.icon == null) {
+                painterResource(R.drawable.robot)
+            } else {
+                rememberDrawablePainter(drawable = app.icon)
+            }
+
+            val colorFilter = remember {
+                if (!app.isInstalled) {
+                    ColorFilter.colorMatrix(ColorMatrix().apply {
+                        setToSaturation(0f) // setting saturation to 0 will convert image to grayscale
+                    })
+                } else {
+                    null
+                }
+            }
+
+            Image(painter = painter, contentDescription = "App icon", modifier = Modifier.size(40.dp), colorFilter = colorFilter)
+        },
+        // score indicator
+        trailingContent = {
+            val score: Double? = remember { appWithReports.getLatestReport()?.mainScore }
+            score?.let {
+                SmallScoreIndicator(score = score)
+            }
+
+        },
+        modifier = modifier
+    )
+}
+
+@Composable
+fun StrikethroughText(text: String, modifier: Modifier = Modifier) {
+    val annotatedString = remember {
+        buildAnnotatedString {
+            withStyle(style = SpanStyle(textDecoration = TextDecoration.LineThrough)) {
+                append(text)
+            }
+        }
+    }
+
+    Text(text = annotatedString, modifier = modifier)
+}
+
+
+/**
+ * Preview for [AppsScreen].
+ */
 @Preview(showBackground = true)
 @Composable
 fun AppsScreenPreview() {
     AppsScreen()
 }
 
+/**
+ * Preview for [AppListItem]
+ */
 @Preview
 @Composable
 fun AppListItemPreview() {
