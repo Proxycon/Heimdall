@@ -48,7 +48,7 @@ under [Releases](https://github.com/Proxycon/Heimdall/releases) or build the apk
 
 ### Dependencies
 
-Heimdall leverages a variety of tools, frameworks and technologies:
+Heimdall leverages a variety of tools, frameworks and technologies, most notably:
 
 - [Gradle](https://gradle.org/) offers extensive build automation for Kotlin and Android
   development.
