@@ -10,7 +10,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -20,16 +19,22 @@ import de.tomcory.heimdall.ui.theme.acceptableScoreColor
 import de.tomcory.heimdall.ui.theme.questionableScoreColor
 import de.tomcory.heimdall.ui.theme.unacceptableScoreColor
 
+// old hardcoded colors:
 // private val colors = mapOf("red" to Color(0xFF914406), "yellow" to Color(0xFF5e5006), "green" to Color(0xFF437a5a))
+
+// colors for indicator
 private val colors = mapOf(
     "red" to unacceptableScoreColor,
     "yellow" to questionableScoreColor,
     "green" to acceptableScoreColor
 )
 
-
+/**
+ * Indicator Composable for [AppListItem] that shows app [score] in list entry.
+ */
 @Composable
 fun SmallScoreIndicator(score:Double, size: Dp = 50.dp) {
+    // color changes on score threshold - should respect threshold set in preference in the future
     val backgroundColor = remember {
         if (score > .75) colors["green"]!!
         else if (score > .50) colors["yellow"]!!
@@ -43,9 +48,8 @@ fun SmallScoreIndicator(score:Double, size: Dp = 50.dp) {
             .fillMaxSize()
             .align(Alignment.Center)) {
             // val brush = Brush.radialGradient()
-            drawRoundRect(
+            drawCircle(
                 color = backgroundColor,
-                cornerRadius = CornerRadius(10f, 10f)
                 )
         }
         Text(
