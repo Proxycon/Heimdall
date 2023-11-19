@@ -55,6 +55,7 @@ import de.tomcory.heimdall.evaluator.Evaluator
 import de.tomcory.heimdall.persistence.database.dao.AppWithReports
 import de.tomcory.heimdall.persistence.database.entity.App
 import de.tomcory.heimdall.persistence.database.entity.Report
+import de.tomcory.heimdall.util.*
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -124,7 +125,7 @@ fun AppDetailScreen(
                     ListItem(headlineContent = { Text(text = appDetailUiState.packageLabel) },
                         supportingContent = {
                             Text(
-                                text = appDetailUiState.packageName,
+                                text = convertLongTimeToDateAndTimeStamp(appDetailUiState.report?.timestamp ?: 0L) ?: "",
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -205,7 +206,7 @@ fun AppDetailScreen(
         snackbarHost = {
             SnackbarHost(hostState = appDetailUiState.snackbarHostState)
         },
-        ) { padding ->
+    ) { padding ->
         Column(Modifier.padding(padding)) {
             LazyColumn(
                 modifier = Modifier
@@ -296,7 +297,6 @@ data class AppDetailScreeUIState(
     val snackbarHostState: SnackbarHostState = SnackbarHostState()
 )
 
-
 /**
  * Debugging Preview
  */
@@ -310,7 +310,7 @@ fun NewAppDetailScreenPreview() {
         versionCode = 0
     )
     val reports =
-        listOf(Report(mainScore = 0.76, timestamp = 1234, appPackageName = "com.test.package"))
+        listOf(Report(mainScore = 0.76, timestamp = 1700236542636, appPackageName = "com.test.package"))
     AppDetailScreen(appWithReports = AppWithReports(app, reports), onDismissRequest = { })
 }
 
